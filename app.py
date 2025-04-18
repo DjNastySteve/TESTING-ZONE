@@ -26,79 +26,62 @@ def generate_agency_report(df, agency_name):
     # Recap summary text
     diff_total = df["Current Sales"].sum() - df["Prior Sales"].sum()
     summary_lines = []
-    summary_lines.append(f"Hope everyone’s doing well! Here's your {agency_name} recap:
-")
+    summary_lines.append(f"""Hope everyone’s doing well! Here's your {agency_name} recap:\n""")
     if diff_total < 0:
-        summary_lines.append(f"We ended the period down ${abs(diff_total):,.0f} vs last year. Still some wins to celebrate.
-")
+        summary_lines.append(f"We ended the period down ${abs(diff_total):,.0f} vs last year. Still some wins to celebrate.\n")
     else:
-        summary_lines.append(f"We ended the period up ${abs(diff_total):,.0f} over last year — great momentum!
-")
-    summary_lines.append("
-Top dealers:")
+        summary_lines.append(f"We ended the period up ${abs(diff_total):,.0f} over last year — great momentum!\n")
+    summary_lines.append("\nTop dealers:")
     for dealer, row in top_growth_dollars.iterrows():
         summary_lines.append(f"- {dealer}: +${row['$ Growth']:,.0f}")
-    summary_lines.append("
-Dealers who pulled back:")
+    summary_lines.append("\nDealers who pulled back:")
     for dealer, row in top_decline_dollars.iterrows():
         summary_lines.append(f"- {dealer}: -${abs(row['$ Growth']):,.0f}")
-    summary_lines.append("""
-🔥 Product to plug: Rhyme Downlights. Sleek, simple, and a showroom favorite.
-Let’s lean into wins, check in on our quiet ones, and light it up ⚡""")
-    summary_text = "
-".join(summary_lines)
+    summary_lines.append("""\n🔥 Product to plug: Rhyme Downlights. Sleek, simple, and a showroom favorite.
+    Let’s lean into wins, check in on our quiet ones, and light it up ⚡""")
+    summary_text = "\n".join(summary_lines)
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         workbook = writer.book
         money_fmt = workbook.add_format({'num_format': '$#,##0'})
-        pct_fmt = workbook.add_format({'num_format': '0%'})
         bold = workbook.add_format({'bold': True})
         wrap_fmt = workbook.add_format({'text_wrap': True, 'valign': 'top'})
 
-        # Summary tab (legacy)
+        # Summary
         df.to_excel(writer, index=False, sheet_name="Summary")
         ws_summary = writer.sheets["Summary"]
         for col_num, value in enumerate(df.columns):
-            if "Sales" in value or "$" in value:
-                ws_summary.set_column(col_num, col_num, 18, money_fmt)
-            elif "%" in value:
-                ws_summary.set_column(col_num, col_num, 12, pct_fmt)
-            else:
-                ws_summary.set_column(col_num, col_num, 18)
+            ws_summary.set_column(col_num, col_num, 18, money_fmt if "Sales" in value else None)
 
         # Auto Summary
         ws_auto = workbook.add_worksheet("Auto Summary")
         ws_auto.set_column("A:A", 100, wrap_fmt)
         ws_auto.write("A1", summary_text)
 
-        # Dashboard
-        dash = workbook.add_worksheet("Dashboard")
-        dash.write("A1", "Top Dealers", bold)
-        for i, (name, val) in enumerate(top_customers.items()):
-            dash.write(i + 2, 0, name)
-            dash.write(i + 2, 1, val, money_fmt)
-        dash.write("D1", "Bottom Dealers", bold)
-        for i, (name, val) in enumerate(bottom_customers.items()):
-            dash.write(i + 2, 3, name)
-            dash.write(i + 2, 4, val, money_fmt)
-
-        # Product Categories tab
-        cat_tab = workbook.add_worksheet("Product Categories")
-        cat_tab.write("A1", "Category", bold)
-        cat_tab.write("B1", "Sales", bold)
-        for i, (cat, val) in enumerate(category_sales.items()):
-            cat_tab.write(i + 1, 0, cat)
-            cat_tab.write(i + 1, 1, val, money_fmt)
-
         # Deep Dive
-        deep = workbook.add_worksheet("Detailed Dashboard")
-        deep.write("A1", "Client-Level Detail", bold)
+        deep = workbook.add_worksheet("Deep Dive")
+        deep.write("A1", "Best-Selling Product Categories", bold)
+        for i, (cat, val) in enumerate(category_sales.items()):
+            deep.write(i + 2, 0, cat)
+            deep.write(i + 2, 1, val, money_fmt)
+
+        deep.write("D1", "Top Dealers", bold)
+        for i, (name, val) in enumerate(top_customers.items()):
+            deep.write(i + 2, 3, name)
+            deep.write(i + 2, 4, val, money_fmt)
+
+        deep.write("G1", "Bottom Dealers", bold)
+        for i, (name, val) in enumerate(bottom_customers.items()):
+            deep.write(i + 2, 6, name)
+            deep.write(i + 2, 7, val, money_fmt)
+
+        deep.write("A20", "Client-Level Detail", bold)
         for col_idx, col in enumerate(df.columns):
-            deep.write(2, col_idx, col, bold)
+            deep.write(21, col_idx, col, bold)
         for row_idx, row in df.iterrows():
             for col_idx, val in enumerate(row):
-                deep.write(3 + row_idx, col_idx, val, money_fmt if "Sales" in df.columns[col_idx] else None)
-        deep.autofilter(2, 0, 2 + len(df), len(df.columns) - 1)
+                deep.write(22 + row_idx, col_idx, val, money_fmt if "Sales" in df.columns[col_idx] else None)
+        deep.autofilter(21, 0, 21 + len(df), len(df.columns) - 1)
 
     return output.getvalue()
 

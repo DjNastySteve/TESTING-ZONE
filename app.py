@@ -11,20 +11,20 @@ def generate_agency_report(df, agency_name):
         df[col] = df[col].replace("(Blanks)", pd.NA)
 
     # Prep summary data
-    total_sales = df[sales_column].sum()
-    top_customers = df.groupby("Customer Name")[sales_column].sum().sort_values(ascending=False).head(10)
-    bottom_customers = df.groupby("Customer Name")[sales_column].sum().sort_values(ascending=True).head(10)
-    category_sales = df.groupby("Category 1")[sales_column].sum().sort_values(ascending=False)
+    total_sales = df["Current Sales"].sum()
+    top_customers = df.groupby("Customer Name")["Current Sales"].sum().sort_values(ascending=False).head(10)
+    bottom_customers = df.groupby("Customer Name")["Current Sales"].sum().sort_values(ascending=True).head(10)
+    category_sales = df.groupby("Category 1")["Current Sales"].sum().sort_values(ascending=False)
 
-    growth = df.groupby("Customer Name")[[sales_column, "Prior Sales"]].sum()
-    growth["$ Growth"] = growth[sales_column] - growth["Prior Sales"]
+    growth = df.groupby("Customer Name")[["Current Sales", "Prior Sales"]].sum()
+    growth["$ Growth"] = growth["Current Sales"] - growth["Prior Sales"]
     growth["% Growth"] = growth["$ Growth"] / growth["Prior Sales"].replace(0, pd.NA) * 100
     top_growth_dollars = growth.sort_values("$ Growth", ascending=False).head(3)
     top_growth_percent = growth[growth["% Growth"] > 0].sort_values("% Growth", ascending=False).head(3)
     top_decline_dollars = growth.sort_values("$ Growth", ascending=True).head(3)
 
     # Recap summary text
-    diff_total = df[sales_column].sum() - df["Prior Sales"].sum()
+    diff_total = df["Current Sales"].sum() - df["Prior Sales"].sum()
     summary_lines = []
     summary_lines.append(f"""Hope everyone’s doing well! Here's your {agency_name} recap:\n""")
     if diff_total < 0:
@@ -113,7 +113,7 @@ def load_data(file):
     for df in [sales_df, mtd_df]:
         df.columns = df.columns.str.strip()
         df["Sales Rep"] = df["Sales Rep"].astype(str)
-        df[sales_column] = pd.to_numeric(df[sales_column], errors="coerce").fillna(0)
+        df["Current Sales"] = pd.to_numeric(df["Current Sales"], errors="coerce").fillna(0)
 
     return sales_df, mtd_df, rep_map
 
@@ -159,7 +159,7 @@ else:
 st.markdown(banner_html, unsafe_allow_html=True)
 
 
-total_sales = df_filtered[sales_column].sum()
+total_sales = df_filtered["Current Sales"].sum()
 budget = agency_budget_mapping.get(selected_agency, 0) if selected_agency != "All" else budgets.get(territory, 0)
 percent_to_goal = (total_sales / budget * 100) if budget > 0 else 0
 total_customers = df_filtered["Customer Name"].nunique()
@@ -173,18 +173,18 @@ st.progress(min(int(percent_to_goal), 100))
 
 # Top & Bottom Customers
 st.subheader("🏆 Top 10 Customers by Sales")
-top10 = df_filtered.groupby(["Customer Name", "Agency"])[sales_column].sum().sort_values(ascending=False).head(10).reset_index()
-top10["Sales ($)"] = top10[sales_column].apply(lambda x: f"${x:,.2f}")
+top10 = df_filtered.groupby(["Customer Name", "Agency"])["Current Sales"].sum().sort_values(ascending=False).head(10).reset_index()
+top10["Sales ($)"] = top10["Current Sales"].apply(lambda x: f"${x:,.2f}")
 st.table(top10[["Customer Name", "Agency", "Sales ($)"]])
 
 st.subheader("🚨 Bottom 10 Customers by Sales")
-bottom10 = df_filtered.groupby(["Customer Name", "Agency"])[sales_column].sum().sort_values().head(10).reset_index()
-bottom10["Sales ($)"] = bottom10[sales_column].apply(lambda x: f"${x:,.2f}")
+bottom10 = df_filtered.groupby(["Customer Name", "Agency"])["Current Sales"].sum().sort_values().head(10).reset_index()
+bottom10["Sales ($)"] = bottom10["Current Sales"].apply(lambda x: f"${x:,.2f}")
 st.table(bottom10[["Customer Name", "Agency", "Sales ($)"]])
 
 # Agency Bar Chart
 st.subheader("🏢 Agency Sales Comparison")
-agency_grouped = df_filtered.groupby("Agency")[sales_column].sum().sort_values()
+agency_grouped = df_filtered.groupby("Agency")["Current Sales"].sum().sort_values()
 fig, ax = plt.subplots(figsize=(10, 5))
 bars = ax.barh(agency_grouped.index, agency_grouped.values, color="#00c3ff")
 ax.bar_label(bars, fmt="%.0f", label_type="edge")

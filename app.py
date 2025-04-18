@@ -151,6 +151,8 @@ df_filtered = df_filtered if selected_agency == "All" else df_filtered[df_filter
 
 
 if view_option == "MTD":
+    budget_column = 'Proluxe FY25 Monthly Budget'
+    sales_column = 'FY25 Current MTD'
     banner_html = "<div style='background-color:#111; padding:0.8em 1em; border-radius:0.5em; color:#DDD;'>📅 <b>Now Viewing:</b> <span style='color:#00FFAA;'>Month-To-Date</span> Performance</div>"
 else:
     banner_html = "<div style='background-color:#111; padding:0.8em 1em; border-radius:0.5em; color:#DDD;'>📅 <b>Now Viewing:</b> <span style='color:#FFD700;'>Year-To-Date</span> Performance</div>"

@@ -91,7 +91,7 @@ st.set_page_config(page_title="Proluxe Sales Dashboard", layout="wide")
 view_option = st.sidebar.radio("📅 Select View", ["YTD", "MTD"])
 territory = st.sidebar.radio("📌 Select Sales Manager", ["All", "Cole", "Jake", "Proluxe"])
 @st.cache_data
-def load_data(file):
+def load_data(view_option):
     sales_df = pd.read_excel(file, sheet_name="Sales Data YTD")
     mtd_df = pd.read_excel(file, sheet_name="Monthly Goal Sales Data")
     cole_reps = ['609', '617', '621', '623', '625', '626']
@@ -103,9 +103,15 @@ def load_data(file):
     for df in [sales_df, mtd_df]:
         df.columns = df.columns.str.strip()
         df["Sales Rep"] = df["Sales Rep"].astype(str)
+    if view_option == 'MTD':
+        sales_column = 'FY25 Current MTD'
+        budget_column = 'Proluxe FY25 Monthly Budget'
+    else:
+        sales_column = 'FY25 Current'
+        budget_column = 'Proluxe FY25 Budget'
         df[sales_column] = pd.to_numeric(df[sales_column], errors="coerce").fillna(0)
     return sales_df, mtd_df, rep_map
-sales_df, mtd_df, rep_map = load_data("FY25.PLX.xlsx")
+sales_df, mtd_df, rep_map = load_data(view_option)
 df = mtd_df.copy() if view_option == "MTD" else sales_df.copy()
 df = df.merge(rep_map, left_on="Sales Rep", right_on="REP", how="left")
 rep_agency_mapping = {
